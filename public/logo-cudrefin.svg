@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <style>
+    .title { fill: #4a4a4a; font-family: Arial, Helvetica, sans-serif; font-weight: 300; font-size: 11px; letter-spacing: 6px; }
+    .main { fill: #4a4a4a; font-family: Arial, Helvetica, sans-serif; font-weight: 700; font-size: 42px; }
+    .wave { fill: none; stroke: #5b9a9a; stroke-width: 2.5; stroke-linecap: round; }
+    .dot { fill: #e8b84a; }
+  </style>
+  
+  <!-- Top line -->
+  <text x="200" y="35" text-anchor="middle" class="title">COMMUNE DE</text>
+  
+  <!-- Main text with custom E and i -->
+  <text x="70" y="85" class="main">C</text>
+  <text x="107" y="85" class="main">U</text>
+  <text x="157" y="85" class="main">D</text>
+  <text x="197" y="85" class="main">R</text>
+  
+  <!-- E as waves -->
+  <path d="M 238,63 Q 242,68 238,73" class="wave"/>
+  <path d="M 238,73 Q 242,78 238,83" class="wave"/>
+  <path d="M 238,83 Q 242,88 238,93" class="wave"/>
+  
+  <!-- F -->
+  <text x="260" y="85" class="main">F</text>
+  <!-- I -->
+  <text x="295" y="85" class="main">I</text>
+  <!-- N -->
+  <text x="320" y="85" class="main">N</text>
+  
+  <!-- Yellow dot over a small 'i' -->
+  <circle cx="354" cy="62" r="4" class="dot"/>
+</svg>

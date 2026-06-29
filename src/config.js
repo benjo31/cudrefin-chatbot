@@ -1,0 +1,46 @@
+import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..');
+
+function required(name) {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing env var: ${name}`);
+  return v;
+}
+
+export const config = {
+  root,
+  port: parseInt(process.env.PORT || '3001', 10),
+  publicBaseUrl: process.env.PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || 3001}`,
+  // Supabase
+  supabaseUrl: required('SUPABASE_URL'),
+  supabaseKey: required('SUPABASE_SERVICE_KEY'),
+
+  // Local data dir (for uploads only now)
+  databasePath: path.resolve(root, process.env.DATABASE_PATH || './data/cudrefin.db'),
+  uploadsPath: path.resolve(root, process.env.UPLOADS_PATH || './data/uploads'),
+  masterKey: process.env.MASTER_KEY || null,
+  sessionSecret: process.env.SESSION_SECRET || null,
+  adminEmail: process.env.ADMIN_EMAIL || 'admin@cudrefin.ch',
+  adminPassword: process.env.ADMIN_PASSWORD || 'changeme',
+  enableOcr: process.env.ENABLE_OCR === '1',
+  maxKnowledgeChars: 80000,
+  conversationWindow: 12,
+
+  // LLM
+  llmApiKey: process.env.LLM_API_KEY || null,
+
+  // SMTP — notification email des leads
+  smtpHost: process.env.SMTP_HOST || null,
+  smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
+  smtpUser: process.env.SMTP_USER || null,
+  smtpPass: process.env.SMTP_PASS || null,
+  notificationEmail: process.env.NOTIFICATION_EMAIL || null,
+
+  // LiveAvatar
+  liveavatarApiKey: process.env.LIVEAVATAR_API_KEY || null,
+  liveavatarAvatarId: process.env.LIVEAVATAR_AVATAR_ID || null,
+};

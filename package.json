@@ -1,0 +1,40 @@
+{
+  "name": "cudrefin-chatbot",
+  "version": "1.0.0",
+  "description": "Chatbot d'information pour la Commune de Cudrefin",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node db/seed.js"
+  },
+  "engines": {
+    "node": "20.x"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@heygen/liveavatar-web-sdk": "^0.0.18",
+    "@supabase/supabase-js": "^2.108.2",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.7.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mammoth": "^1.8.0",
+    "multer": "^1.4.5-lts.1",
+    "nanoid": "^5.0.9",
+    "openai": "^4.77.0",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.22.0",
+    "ws": "^8.21.0"
+  },
+  "optionalDependencies": {
+    "tesseract.js": "^5.1.1"
+  },
+  "devDependencies": {
+    "@railway/cli": "^5.8.0",
+    "@types/pg": "^8.20.0"
+  }
+}
