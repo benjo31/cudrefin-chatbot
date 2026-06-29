@@ -40,6 +40,99 @@
     return el;
   };
 
+  // -------- Thématiques de démarrage --------
+  const TOPICS = [
+    { label: '🏠 Arrivée dans la commune', url: 'https://www.cudrefin.ch/administration/office-de-la-population' },
+    { label: '📋 Démarches administratives', url: 'https://www.cudrefin.ch/toutes-les-demarches' },
+    { label: '🗑️ Déchetterie & voirie', url: 'https://www.cudrefin.ch/administration/services-de-voirie/dechetterie-de-cudrefin' },
+    { label: '🏖️ Tourisme & camping', url: 'https://www.cudrefin.ch/tourisme' },
+    { label: '📚 Écoles & parascolaire', url: 'https://www.cudrefin.ch/vivre-a-cudrefin/ecoles-et-parascolaire' },
+    { label: '🏛️ Services communaux', url: 'https://www.cudrefin.ch/administration' },
+    { label: '🚗 Stationnement', url: 'https://www.cudrefin.ch/vivre-a-cudrefin/stationnement' },
+    { label: '🚨 Urgences', url: 'https://www.cudrefin.ch/vivre-a-cudrefin/urgences' },
+  ];
+
+  // -------- Helper: parse les liens markdown dans le texte --------
+  function parseLinks(text) {
+    // Convertit [texte](url) en éléments DOM cliquables
+    const parts = [];
+    const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let lastIdx = 0;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(document.createTextNode(text.slice(lastIdx, match.index)));
+      }
+      const btn = document.createElement('a');
+      btn.href = match[2];
+      btn.target = '_blank';
+      btn.rel = 'noopener noreferrer';
+      btn.textContent = match[1];
+      Object.assign(btn.style, {
+        display: 'inline-block',
+        background: 'var(--title, #2db6c3)',
+        color: '#fff',
+        padding: '8px 16px',
+        borderRadius: '8px',
+        textDecoration: 'none',
+        fontWeight: '600',
+        fontSize: '13px',
+        margin: '4px 4px 0 0',
+        cursor: 'pointer',
+      });
+      btn.onmouseenter = () => { btn.style.filter = 'brightness(1.1)'; };
+      btn.onmouseleave = () => { btn.style.filter = 'none'; };
+      parts.push(btn);
+      lastIdx = match.index + match[0].length;
+    }
+    if (lastIdx < text.length) {
+      parts.push(document.createTextNode(text.slice(lastIdx)));
+    }
+    return parts.length > 0 ? parts : [document.createTextNode(text)];
+  }
+
+  // -------- Helper: render un message avec support des liens --------
+  function renderMessage(text, role) {
+    const cls = role === 'user' ? 'sx-msg-user' : 'sx-msg-bot';
+    const el = document.createElement('div');
+    el.className = `sx-msg ${cls}`;
+    const parts = parseLinks(text);
+    parts.forEach(p => el.appendChild(p));
+    return el;
+  }
+
+  // -------- Helper: créer les boutons de thématiques --------
+  function renderTopicButtons() {
+    const container = document.createElement('div');
+    container.className = 'sx-topics';
+    container.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:4px 12px 8px;';
+    TOPICS.forEach(t => {
+      const btn = document.createElement('button');
+      btn.textContent = t.label;
+      Object.assign(btn.style, {
+        background: 'var(--title, #2db6c3)',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        fontSize: '13px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        flex: '1 1 auto',
+        minWidth: '120px',
+        textAlign: 'left',
+      });
+      btn.onmouseenter = () => { btn.style.filter = 'brightness(1.1)'; };
+      btn.onmouseleave = () => { btn.style.filter = 'none'; };
+      btn.addEventListener('click', () => {
+        // Envoyer le nom de la thématique comme message utilisateur
+        sendMessage(t.label.replace(/^[^\s]+\s/, '')); // Enlève l'emoji
+      });
+      container.appendChild(btn);
+    });
+    return container;
+  }
+
   // Simple toast notification
   function toast(msg) {
     const t = document.createElement('div');
@@ -677,8 +770,8 @@
         const data = await r.json();
         if (data.messages && data.messages.length > 0) {
           for (const msg of data.messages) {
-            const cls = msg.role === 'user' ? 'sx-msg-user' : 'sx-msg-bot';
-            body.appendChild(h('div', { class: `sx-msg ${cls}` }, msg.content));
+            const el = renderMessage(msg.content, msg.role);
+            body.appendChild(el);
           }
           body.scrollTop = body.scrollHeight;
           return true;
@@ -689,10 +782,13 @@
       return false;
     }
 
-    // Welcome message (skip if history already loaded)
+    // Welcome message + topics (skip if history already loaded)
     loadHistory().then((hasHistory) => {
       if (!hasHistory && config.welcome) {
-        body.appendChild(h('div', { class: 'sx-msg sx-msg-bot' }, config.welcome));
+        const welcomeEl = renderMessage(config.welcome, 'bot');
+        body.appendChild(welcomeEl);
+        // Afficher les boutons de thématiques
+        body.appendChild(renderTopicButtons());
       }
     });
 
@@ -761,7 +857,9 @@
       body.appendChild(typing);
       body.scrollTop = body.scrollHeight;
 
-      const botMsg = h('div', { class: 'sx-msg sx-msg-bot' }, '');
+      const botMsg = document.createElement('div');
+      botMsg.className = 'sx-msg sx-msg-bot';
+      let botMsgText = '';
       let botMsgAdded = false;
       let suggestPayload = null;
 
@@ -791,7 +889,8 @@
               const obj = JSON.parse(payload);
               if (obj.delta) {
                 if (!botMsgAdded) { typing.remove(); body.appendChild(botMsg); botMsgAdded = true; }
-                botMsg.textContent += obj.delta;
+                botMsgText += obj.delta;
+                botMsg.textContent = botMsgText;
                 body.scrollTop = body.scrollHeight;
               } else if (obj.event === 'suggest_lead') {
                 suggestPayload = { email: obj.email, phone: obj.phone };
@@ -806,6 +905,16 @@
         if (typing.parentNode) typing.remove();
         sendBtn.disabled = false;
         input.focus();
+
+        // Parser les liens dans la réponse complète
+        if (botMsgAdded && botMsgText) {
+          const hasLink = /\[[^\]]+\]\([^)]+\)/.test(botMsgText);
+          if (hasLink) {
+            botMsg.innerHTML = '';
+            const parts = parseLinks(botMsgText);
+            parts.forEach(p => botMsg.appendChild(p));
+          }
+        }
 
         if (suggestPayload && config.leadCaptureEnabled && !leadSubmitted) {
           const cta = h('button', { class: 'sx-lead-cta', onclick: () => openLeadModal(suggestPayload) }, 'Être recontacté');
