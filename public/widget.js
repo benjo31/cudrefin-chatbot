@@ -102,7 +102,7 @@
   }
 
   // -------- Helper: créer les boutons de thématiques --------
-  function renderTopicButtons() {
+  function renderTopicButtons(onTopicClick) {
     const container = document.createElement('div');
     container.className = 'sx-topics';
     container.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:4px 12px 8px;';
@@ -124,9 +124,12 @@
       });
       btn.onmouseenter = () => { btn.style.filter = 'brightness(1.1)'; };
       btn.onmouseleave = () => { btn.style.filter = 'none'; };
-      btn.addEventListener('click', () => {
-        // Envoyer le nom de la thématique comme message utilisateur
-        sendMessage(t.label.replace(/^[^\s]+\s/, '')); // Enlève l'emoji
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const topicText = t.label.replace(/^[^\s]+\s/, '');
+        if (typeof onTopicClick === 'function') {
+          onTopicClick(topicText);
+        }
       });
       container.appendChild(btn);
     });
@@ -788,7 +791,7 @@
         const welcomeEl = renderMessage(config.welcome, 'bot');
         body.appendChild(welcomeEl);
         // Afficher les boutons de thématiques
-        body.appendChild(renderTopicButtons());
+        body.appendChild(renderTopicButtons((topic) => sendMessage(topic)));
       }
     });
 
