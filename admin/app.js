@@ -50,10 +50,10 @@ const state = {
 };
 
 const SOLUXA_BRANDING = {
-  titleColor: '#62a70f',
-  textColor: '#002d5d',
+  titleColor: '#2db6c3',
+  textColor: '#003d5e',
   bgColor: '#FFFFFF',
-  accentColor: '#62a70f',
+  accentColor: '#2db6c3',
   font: "'Source Sans Pro', sans-serif",
   logoUrl: '/logo-cudrefin.svg',
 };
@@ -621,7 +621,7 @@ async function showConversation(convId) {
     wrap.appendChild(el('div', {
       style: {
         padding: '8px 12px', borderRadius: '10px',
-        background: msg.role === 'user' ? '#62a70f' : '#f3f6fa',
+        background: msg.role === 'user' ? '#2db6c3' : '#f3f6fa',
         color: msg.role === 'user' ? '#fff' : '#002d5d',
         alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
         maxWidth: '85%', whiteSpace: 'pre-wrap', fontSize: '13.5px',
@@ -840,7 +840,7 @@ function renderHeyGen(c) {
   // Avatar preview
   const previewImg = heygen.avatarPreviewImage ? el('img', {
     src: heygen.avatarPreviewImage,
-    style: 'width: 120px; height: 120px; border-radius: 60px; object-fit: cover; border: 3px solid #62a70f;',
+    style: 'width: 120px; height: 120px; border-radius: 60px; object-fit: cover; border: 3px solid #2db6c3;',
   }) : null;
 
   card.appendChild(el('div', { class: 'form-grid' },

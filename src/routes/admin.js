@@ -14,11 +14,11 @@ export const adminRouter = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 const CUDRREFIN_BRANDING = {
-  titleColor: '#003d7a',
-  textColor: '#1a1a1a',
+  titleColor: '#2db6c3',
+  textColor: '#003d5e',
   bgColor: '#FFFFFF',
-  accentColor: '#c8a84e',
-  font: "'Inter', system-ui, sans-serif",
+  accentColor: '#2db6c3',
+  font: "'Source Sans Pro', sans-serif",
   logoUrl: '/logo-cudrefin.svg',
 };
 

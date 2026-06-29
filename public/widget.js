@@ -61,8 +61,8 @@
 
   // -------- CSS (injecté dans Shadow DOM) --------
   function buildCss(brand) {
-    const title = brand.titleColor || '#62a70f';
-    const text = brand.textColor || '#002d5d';
+    const title = brand.titleColor || '#2db6c3';
+    const text = brand.textColor || '#003d5e';
     const bg = brand.bgColor || '#FFFFFF';
     const accent = brand.accentColor || title;
     const font = brand.font || "'Source Sans Pro', sans-serif";

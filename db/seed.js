@@ -4,10 +4,10 @@ import { hashPassword } from '../src/auth.js';
 import { config } from '../src/config.js';
 
 const CUDREFIN_BRANDING = {
-  titleColor: '#62a70f',
-  textColor: '#002d5d',
+  titleColor: '#2db6c3',
+  textColor: '#003d5e',
   bgColor: '#FFFFFF',
-  accentColor: '#62a70f',
+  accentColor: '#2db6c3',
   font: "'Source Sans Pro', sans-serif",
   logoUrl: '/logo-cudrefin.svg',
 };
