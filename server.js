@@ -41,6 +41,9 @@ app.get('/vendor/heygen-liveavatar-sdk.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules/@heygen/liveavatar-web-sdk/dist/index.umd.js'));
 });
 
+// Fichiers statiques publics (logo, etc.)
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Dashboard admin
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.get('/admin', (req, res) => res.redirect('/admin/'));
