@@ -23,6 +23,24 @@ const CUDRREFIN_BRANDING = {
 };
 
 // ---------- AUTH ----------
+adminRouter.post('/init-first-admin', async (req, res) => {
+  // Crée l'admin par défaut si aucun admin n'existe (one-shot)
+  try {
+    const { count, error: countErr } = await sb.from('admins').select('*', { count: 'exact', head: true });
+    if (countErr) return res.status(500).json({ error: countErr.message });
+    if (count && count > 0) return res.json({ ok: true, message: 'Admin déjà existant.' });
+    const { hashPassword } = await import('../auth.js');
+    const hash = await hashPassword(config.adminPassword);
+    const { error } = await sb.from('admins').insert({ email: config.adminEmail, password_hash: hash });
+    if (error) return res.status(500).json({ error: error.message });
+    console.log(`[init] Admin créé : ${config.adminEmail}`);
+    res.json({ ok: true, email: config.adminEmail });
+  } catch (e) {
+    console.error('[init] error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 adminRouter.post('/login', async (req, res) => {
   const { email, password } = req.body || {};
   const admin = await verifyAdmin(email, password);
