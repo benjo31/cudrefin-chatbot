@@ -1,17 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
-import WebSocket from 'ws';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
 
 // Ensure local uploads dir exists
-fs.mkdirSync(config.uploadsPath, { recursive: true });
+try {
+  fs.mkdirSync(config.uploadsPath, { recursive: true });
+} catch (e) {
+  console.error('[db] Failed to create uploads directory:', e.message);
+}
 
 // Supabase client (service_role = bypass RLS for backend)
-export const sb = createClient(config.supabaseUrl, config.supabaseKey, {
-  auth: { persistSession: false },
-  realtime: { transport: WebSocket },
-});
+let sb;
+try {
+  sb = createClient(config.supabaseUrl, config.supabaseKey, {
+    auth: { persistSession: false },
+  });
+} catch (e) {
+  console.error('[db] Failed to create Supabase client:', e.message);
+  process.exit(1);
+}
 
 // Keep a backward-compatible db object so minimal code changes needed
 // We still create the SQLite db for local dev fallback but the real data lives in Supabase
