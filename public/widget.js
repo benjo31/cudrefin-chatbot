@@ -46,7 +46,7 @@
     t.textContent = msg;
     Object.assign(t.style, {
       position: 'fixed', bottom: '100px', right: '24px',
-      background: '#002d5d', color: '#fff', padding: '10px 18px',
+      background: '#003d5e', color: '#fff', padding: '10px 18px',
       borderRadius: '10px', fontSize: '13px', fontWeight: '600',
       boxShadow: '0 4px 16px rgba(0,0,0,0.2)', zIndex: '2147483647',
       opacity: '0', transform: 'translateY(8px)', transition: 'all 0.2s ease',
@@ -498,3 +498,332 @@
           if (videoEl) {
             avatarSession.attach(videoEl);
             videoEl.play().catch(() => {});
+          }
+          avatarReady = true;
+          avatarStatus('🎭 Lumia est prêt !');
+          setTimeout(() => avatarStatus('Appuyez sur Entrée pour parler à Lumia'), 2000);
+        });
+
+        // Avatar speak events
+        avatarSession.on('avatar.speak_started', () => {
+          avatarSpeaking = true;
+          avatarStatus('🎙 Lumia parle…');
+        });
+        avatarSession.on('avatar.speak_ended', () => {
+          avatarSpeaking = false;
+          avatarStatus('Appuyez sur Entrée pour parler à Lumia');
+        });
+
+        // State changes
+        avatarSession.on('session.state_changed', (state) => {
+          if (state === 'CONNECTING') {
+            avatarStatus('🚀 Connexion…');
+          } else if (state === 'CONNECTED') {
+            avatarStatus('🔄 Préparation…');
+          } else if (state === 'DISCONNECTED') {
+            avatarStatus('🔌 Déconnecté');
+            avatarReady = false;
+            avatarSession = null;
+          }
+        });
+
+        // Error handling
+        avatarSession.on('session.disconnected', () => {
+          avatarStatus('🔌 Session terminée');
+          avatarReady = false;
+          avatarSession = null;
+        });
+
+        // Start the session
+        avatarSession.start().catch((err) => {
+          console.error('[avatar] session start error:', err, 'message:', err.message, 'stack:', err.stack);
+          avatarStatus('⚠ ' + (err.message || 'Erreur de connexion'));
+          avatarReady = false;
+        });
+      }).catch((err) => {
+        console.error('[avatar] init error:', err, 'message:', err.message, 'stack:', err.stack);
+        avatarStatus('⚠ ' + (err.message || 'Erreur initialisation'));
+      });
+    }
+
+    // Load the HeyGen LiveAvatar SDK UMD bundle dynamically
+    let sdkLoadPromise = null;
+    function loadHeyGenSDK() {
+      if (window.LiveAvatarSDK && window.LiveAvatarSDK.LiveAvatarSession) {
+        return Promise.resolve();
+      }
+      if (sdkLoadPromise) return sdkLoadPromise;
+      
+      // First, ensure events$1 shim is loaded (SDK depends on Node.js 'events' module)
+      sdkLoadPromise = new Promise((resolve, reject) => {
+        if (!window.events$1) {
+          // Minimal EventEmitter shim compatible with Node.js EventEmitter
+          class MinimalEventEmitter {
+            constructor() {
+              this._events = {};
+            }
+            _callListeners(type, ...args) {
+              const list = this._events[type];
+              if (!list) return;
+              const listeners = Array.isArray(list) ? [...list] : [list];
+              for (const fn of listeners) {
+                try { fn.apply(this, args); } catch(e) { /* ignore */ }
+              }
+            }
+            on(type, listener) {
+              if (!this._events[type]) this._events[type] = [];
+              this._events[type].push(listener);
+              return this;
+            }
+            off(type, listener) {
+              const list = this._events[type];
+              if (!list) return this;
+              const idx = list.indexOf(listener);
+              if (idx !== -1) list.splice(idx, 1);
+              if (list.length === 0) delete this._events[type];
+              return this;
+            }
+            removeListener(type, listener) { return this.off(type, listener); }
+            addListener(type, listener) { return this.on(type, listener); }
+            emit(type, ...args) {
+              this._callListeners(type, ...args);
+              // Also call 'error' handler if error event
+              if (type === 'error') {
+                const err = args[0];
+                if (!this._events['error']) throw err;
+              }
+              return true;
+            }
+            once(type, listener) {
+              const wrapper = (...args) => {
+                this.off(type, wrapper);
+                listener.apply(this, args);
+              };
+              return this.on(type, wrapper);
+            }
+            listenerCount(type) {
+              const list = this._events[type];
+              return list ? (Array.isArray(list) ? list.length : 1) : 0;
+            }
+            removeAllListeners(type) {
+              if (type) delete this._events[type];
+              else this._events = {};
+              return this;
+            }
+            eventNames() { return Object.keys(this._events); }
+            rawListeners(type) {
+              const list = this._events[type];
+              return list ? (Array.isArray(list) ? [...list] : [list]) : [];
+            }
+            listeners(type) { return this.rawListeners(type); }
+          }
+          MinimalEventEmitter.prototype.EventEmitter = MinimalEventEmitter;
+          window.events$1 = { EventEmitter: MinimalEventEmitter };
+        }
+
+        // Now load the SDK
+        const script = document.createElement('script');
+        script.src = `${baseUrl}/vendor/heygen-liveavatar-sdk.js`;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('SDK load failed'));
+        document.head.appendChild(script);
+      });
+      return sdkLoadPromise;
+    }
+
+    if (avatarBtn) {
+      avatarBtn.addEventListener('click', () => {
+        if (avatarOverlay.classList.contains('sx-open')) {
+          closeAvatarMode();
+        } else {
+          openAvatarMode();
+        }
+      });
+    }
+
+    // Modal lead
+    const modalNameInput = h('input', { type: 'text', placeholder: 'Votre nom' });
+    const modalEmailInput = h('input', { type: 'email', placeholder: 'email@exemple.ch' });
+    const modalPhoneInput = h('input', { type: 'tel', placeholder: '+41 …' });
+    const modalMsgInput = h('textarea', { rows: '3', placeholder: 'Votre demande (facultatif)' });
+    const modalCancel = h('button', { class: 'sx-btn-cancel' }, 'Annuler');
+    const modalSubmit = h('button', { class: 'sx-btn-submit' }, 'Envoyer');
+    const modal = h('div', { class: 'sx-modal' },
+      h('h3', {}, 'Être recontacté'),
+      h('div', { class: 'sx-field' }, h('label', {}, 'Nom'), modalNameInput),
+      h('div', { class: 'sx-field' }, h('label', {}, 'Email'), modalEmailInput),
+      h('div', { class: 'sx-field' }, h('label', {}, 'Téléphone'), modalPhoneInput),
+      h('div', { class: 'sx-field' }, h('label', {}, 'Message'), modalMsgInput),
+      h('div', { class: 'sx-modal-actions' }, modalCancel, modalSubmit)
+    );
+    const modalBackdrop = h('div', { class: 'sx-modal-backdrop' }, modal);
+
+    const panel = h('div', { class: 'sx-panel' }, header, avatarOverlay || null, body, footer, modalBackdrop);
+    shadow.appendChild(panel);
+
+    // -------- State --------
+    const store = getStore();
+    let conversationId = store.conversationId || null;
+    let visitorId = store.visitorId || null;
+    let leadSubmitted = false;
+
+    // -------- Load conversation history --------
+    async function loadHistory() {
+      if (!conversationId) return false;
+      try {
+        const r = await fetch(`${baseUrl}/api/public/bots/${botId}/conversations/${conversationId}/messages`);
+        if (!r.ok) throw new Error('history_fetch_failed');
+        const data = await r.json();
+        if (data.messages && data.messages.length > 0) {
+          for (const msg of data.messages) {
+            const cls = msg.role === 'user' ? 'sx-msg-user' : 'sx-msg-bot';
+            body.appendChild(h('div', { class: `sx-msg ${cls}` }, msg.content));
+          }
+          body.scrollTop = body.scrollHeight;
+          return true;
+        }
+      } catch (e) {
+        console.warn('[Cudrefin Chatbot] Impossible de charger l\'historique:', e);
+      }
+      return false;
+    }
+
+    // Welcome message (skip if history already loaded)
+    loadHistory().then((hasHistory) => {
+      if (!hasHistory && config.welcome) {
+        body.appendChild(h('div', { class: 'sx-msg sx-msg-bot' }, config.welcome));
+      }
+    });
+
+    // -------- Behaviors --------
+    const openPanel = () => { panel.classList.add('sx-open'); launcher.style.display = 'none'; setTimeout(() => input.focus(), 100); };
+    const closePanel = () => { panel.classList.remove('sx-open'); launcher.style.display = 'flex'; };
+    launcher.addEventListener('click', openPanel);
+    closeBtn.addEventListener('click', closePanel);
+
+    async function ensureConversation() {
+      if (conversationId) return conversationId;
+      const r = await fetch(`${baseUrl}/api/public/bots/${botId}/conversation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitorId }),
+      });
+      const j = await r.json();
+      conversationId = j.conversationId;
+      visitorId = j.visitorId;
+      setStore({ conversationId, visitorId });
+      return conversationId;
+    }
+
+    function openLeadModal(prefill = {}) {
+      if (prefill.email) modalEmailInput.value = prefill.email;
+      if (prefill.phone) modalPhoneInput.value = prefill.phone;
+      modalBackdrop.classList.add('sx-open');
+    }
+    modalCancel.addEventListener('click', () => modalBackdrop.classList.remove('sx-open'));
+    modalSubmit.addEventListener('click', async () => {
+      const payload = {
+        conversationId,
+        name: modalNameInput.value.trim(),
+        email: modalEmailInput.value.trim(),
+        phone: modalPhoneInput.value.trim(),
+        message: modalMsgInput.value.trim(),
+      };
+      if (!payload.email && !payload.phone) {
+        modalEmailInput.focus();
+        return;
+      }
+      modalSubmit.disabled = true;
+      try {
+        await fetch(`${baseUrl}/api/public/bots/${botId}/lead`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        modal.innerHTML = '';
+        modal.appendChild(h('div', { class: 'sx-thanks' }, 'Merci ! Nous vous recontactons rapidement.'));
+        leadSubmitted = true;
+        setTimeout(() => modalBackdrop.classList.remove('sx-open'), 1500);
+      } catch {
+        modalSubmit.disabled = false;
+      }
+    });
+
+    async function sendMessage(text) {
+      if (!text.trim()) return;
+      input.value = '';
+      sendBtn.disabled = true;
+
+      body.appendChild(h('div', { class: 'sx-msg sx-msg-user' }, text));
+      body.scrollTop = body.scrollHeight;
+
+      const typing = h('div', { class: 'sx-typing' }, h('span'), h('span'), h('span'));
+      body.appendChild(typing);
+      body.scrollTop = body.scrollHeight;
+
+      const botMsg = h('div', { class: 'sx-msg sx-msg-bot' }, '');
+      let botMsgAdded = false;
+      let suggestPayload = null;
+
+      try {
+        await ensureConversation();
+        const resp = await fetch(`${baseUrl}/api/public/bots/${botId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId, message: text }),
+        });
+        if (!resp.ok || !resp.body) throw new Error('chat_failed');
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop();
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue;
+            const payload = line.slice(5).trim();
+            if (!payload) continue;
+            try {
+              const obj = JSON.parse(payload);
+              if (obj.delta) {
+                if (!botMsgAdded) { typing.remove(); body.appendChild(botMsg); botMsgAdded = true; }
+                botMsg.textContent += obj.delta;
+                body.scrollTop = body.scrollHeight;
+              } else if (obj.event === 'suggest_lead') {
+                suggestPayload = { email: obj.email, phone: obj.phone };
+              }
+            } catch {}
+          }
+        }
+      } catch (e) {
+        typing.remove();
+        body.appendChild(h('div', { class: 'sx-msg sx-msg-bot' }, "Une erreur est survenue. Merci de réessayer."));
+      } finally {
+        if (typing.parentNode) typing.remove();
+        sendBtn.disabled = false;
+        input.focus();
+
+        if (suggestPayload && config.leadCaptureEnabled && !leadSubmitted) {
+          const cta = h('button', { class: 'sx-lead-cta', onclick: () => openLeadModal(suggestPayload) }, 'Être recontacté');
+          body.appendChild(cta);
+          body.scrollTop = body.scrollHeight;
+        }
+      }
+    }
+
+    sendBtn.addEventListener('click', () => sendMessage(input.value));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendMessage(input.value); }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mount);
+  } else {
+    mount();
+  }
+})();
