@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
@@ -11,10 +12,11 @@ try {
 }
 
 // Supabase client (service_role = bypass RLS for backend)
-let sb;
+export let sb;
 try {
   sb = createClient(config.supabaseUrl, config.supabaseKey, {
     auth: { persistSession: false },
+    realtime: { transport: WebSocket },
   });
 } catch (e) {
   console.error('[db] Failed to create Supabase client:', e.message);
