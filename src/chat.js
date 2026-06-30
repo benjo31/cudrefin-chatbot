@@ -51,6 +51,17 @@ export function buildSystemPrompt(bot) {
       ? 'SI l\'utilisateur exprime le besoin d\'être recontacté, demande son nom, email et brièvement sa demande. Indique-lui qu\'un formulaire va lui être proposé.'
       : '',
     '',
+    'IMAGES :',
+    'Tu PEUX inclure des images pertinentes (photos d\'infrastructure, événements, camping, etc.) en utilisant ce format markdown :',
+    '![Description de l\'image](URL_DE_L_IMAGE)',
+    'Utilise les images du site cudrefin.ch quand elles sont disponibles et pertinentes.',
+    'Pour trouver une image, regarde dans la base de connaissance ou utilise l\'URL directe d\'une image du site.',
+    'Ne force PAS la mise d\'image si tu n\'en as pas — uniquement quand c\'est pertinent et que l\'URL est réelle.',
+    '',
+    'LIENS CLIQUABLES :',
+    'QUAND TU PARLES D\'UN SERVICE OU D\'UNE PAGE du site, tu DOIS inclure un lien cliquable vers la page correspondante en utilisant le format Markdown: [Titre du lien](https://www.cudrefin.ch/chemin/page)',
+    'Exemple : "Vous pouvez vous renseigner sur [l\'office de la population](https://www.cudrefin.ch/administration/office-de-la-population)"',
+    '',
     'BASE DE CONNAISSANCE :',
     '(les documents seront chargés dynamiquement)',
   ].filter(Boolean).join('\n');

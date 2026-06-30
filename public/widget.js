@@ -52,37 +52,64 @@
     { label: '🚨 Urgences', url: 'https://www.cudrefin.ch/vivre-a-cudrefin/urgences' },
   ];
 
-  // -------- Helper: parse les liens markdown dans le texte --------
-  function parseLinks(text) {
-    // Convertit [texte](url) en éléments DOM cliquables
+  // -------- Helper: parse les liens et images markdown dans le texte --------
+  function parseContent(text) {
+    // Convertit ![alt](url) en images ET [texte](url) en boutons cliquables
     const parts = [];
-    const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    // Regex combinée: images ![alt](url) ou liens [texte](url)
+    const regex = /!\[([^\]]*)\]\(([^)]+)\)|\[([^\]]+)\]\(([^)]+)\)/g;
     let lastIdx = 0;
     let match;
     while ((match = regex.exec(text)) !== null) {
       if (match.index > lastIdx) {
         parts.push(document.createTextNode(text.slice(lastIdx, match.index)));
       }
-      const btn = document.createElement('a');
-      btn.href = match[2];
-      btn.target = '_blank';
-      btn.rel = 'noopener noreferrer';
-      btn.textContent = match[1];
-      Object.assign(btn.style, {
-        display: 'inline-block',
-        background: 'var(--title, #2db6c3)',
-        color: '#fff',
-        padding: '8px 16px',
-        borderRadius: '8px',
-        textDecoration: 'none',
-        fontWeight: '600',
-        fontSize: '13px',
-        margin: '4px 4px 0 0',
-        cursor: 'pointer',
-      });
-      btn.onmouseenter = () => { btn.style.filter = 'brightness(1.1)'; };
-      btn.onmouseleave = () => { btn.style.filter = 'none'; };
-      parts.push(btn);
+      if (match[1] !== undefined) {
+        // C'est une image ![alt](url)
+        const img = document.createElement('img');
+        img.src = match[2];
+        img.alt = match[1] || '';
+        Object.assign(img.style, {
+          maxWidth: '100%',
+          borderRadius: '10px',
+          margin: '6px 0',
+          display: 'block',
+        });
+        // Si lien externe, wrap dans un <a> pour ouvrir dans un nouvel onglet
+        if (match[2].startsWith('http')) {
+          const wrapper = document.createElement('a');
+          wrapper.href = match[2];
+          wrapper.target = '_blank';
+          wrapper.rel = 'noopener noreferrer';
+          wrapper.style.display = 'block';
+          wrapper.appendChild(img);
+          parts.push(wrapper);
+        } else {
+          parts.push(img);
+        }
+      } else {
+        // C'est un lien [texte](url)
+        const btn = document.createElement('a');
+        btn.href = match[4];
+        btn.target = '_blank';
+        btn.rel = 'noopener noreferrer';
+        btn.textContent = match[3];
+        Object.assign(btn.style, {
+          display: 'inline-block',
+          background: 'var(--title, #2db6c3)',
+          color: '#fff',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          textDecoration: 'none',
+          fontWeight: '600',
+          fontSize: '13px',
+          margin: '4px 4px 0 0',
+          cursor: 'pointer',
+        });
+        btn.onmouseenter = () => { btn.style.filter = 'brightness(1.1)'; };
+        btn.onmouseleave = () => { btn.style.filter = 'none'; };
+        parts.push(btn);
+      }
       lastIdx = match.index + match[0].length;
     }
     if (lastIdx < text.length) {
@@ -96,7 +123,7 @@
     const cls = role === 'user' ? 'sx-msg-user' : 'sx-msg-bot';
     const el = document.createElement('div');
     el.className = `sx-msg ${cls}`;
-    const parts = parseLinks(text);
+    const parts = parseContent(text);
     parts.forEach(p => el.appendChild(p));
     return el;
   }
@@ -206,6 +233,12 @@
         background: none; border: none; cursor: pointer;
         color: ${text}; font-size: 22px; line-height: 1; padding: 4px 8px;
       }
+      .sx-reset {
+        background: none; border: none; cursor: pointer;
+        color: ${title}; font-size: 18px; line-height: 1; padding: 4px 6px;
+        opacity: 0.6; transition: opacity 0.15s ease;
+      }
+      .sx-reset:hover { opacity: 1; }
 
       .sx-body {
         flex: 1; overflow-y: auto;
@@ -430,9 +463,11 @@
     const footer = h('div', { class: 'sx-footer' }, ...footerChildren);
 
     const closeBtn = h('button', { class: 'sx-close', 'aria-label': 'Fermer' }, '×');
+    const resetBtn = h('button', { class: 'sx-reset', 'aria-label': 'Nouvelle discussion', title: 'Nouvelle discussion' }, '↺');
     const headerEls = [];
     if (brand.logoUrl) headerEls.push(h('img', { class: 'sx-logo', src: brand.logoUrl, alt: config.name || 'Logo' }));
     headerEls.push(h('div', { class: 'sx-title' }, config.name || 'Assistant'));
+    headerEls.push(resetBtn);
     headerEls.push(closeBtn);
     const header = h('div', { class: 'sx-header' }, ...headerEls);
 
@@ -801,6 +836,26 @@
     launcher.addEventListener('click', openPanel);
     closeBtn.addEventListener('click', closePanel);
 
+    // Reset conversation
+    resetBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      // Effacer les messages du body
+      body.querySelectorAll('.sx-msg, .sx-topics, .sx-lead-cta').forEach(m => m.remove());
+      // Réinitialiser l'état
+      conversationId = null;
+      visitorId = null;
+      setStore({});
+      leadSubmitted = false;
+      // Remettre le message de bienvenue + thématiques
+      if (config.welcome) {
+        const welcomeEl = renderMessage(config.welcome, 'bot');
+        body.appendChild(welcomeEl);
+        body.appendChild(renderTopicButtons((topic) => sendMessage(topic)));
+      }
+      input.focus();
+      toast('Nouvelle discussion démarrée');
+    });
+
     async function ensureConversation() {
       if (conversationId) return conversationId;
       const r = await fetch(`${baseUrl}/api/public/bots/${botId}/conversation`, {
@@ -909,12 +964,12 @@
         sendBtn.disabled = false;
         input.focus();
 
-        // Parser les liens dans la réponse complète
+        // Parser les liens et images dans la réponse complète
         if (botMsgAdded && botMsgText) {
-          const hasLink = /\[[^\]]+\]\([^)]+\)/.test(botMsgText);
-          if (hasLink) {
+          const hasRich = /\[([^\]]+)\]\([^)]+\)/.test(botMsgText) || /!\[([^\]]*)\]\([^)]+\)/.test(botMsgText);
+          if (hasRich) {
             botMsg.innerHTML = '';
-            const parts = parseLinks(botMsgText);
+            const parts = parseContent(botMsgText);
             parts.forEach(p => botMsg.appendChild(p));
           }
         }
